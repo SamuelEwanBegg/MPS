@@ -23,7 +23,7 @@ Sz = 0.5*np.asarray([[1.0,0],[0,-1.0]])
 
 cycle_times = 1000 #cycle_times*delta = physical simulation time
 times = 3*cycle_times #number of steps
-chiM = 15 #max bond dimension
+chiM = 30 #max bond dimension
 d = 2; #physical dimension
 delta = 0.01; #time-step 
 N = 100 #system size
@@ -85,6 +85,7 @@ sums = np.zeros(cycle_times)
 #Time Evolution
 #2nd order trotter algorithm
 
+pp = 0 #variable that allows printing the first time maximum bond dimension is exceeded.
 kk = 0 #variable updating the physical time, +1 after each succession of gates (every 3rd step)
 for step in range(0,times):
     print(step)
@@ -120,7 +121,10 @@ for step in range(0,times):
             if chi[ii] > chiM: #truncate bond dimension 
                 chi[ii] = chiM
                 l[ii]= Y[0:chi[ii]]/np.sqrt(sum(Y[0:chi[ii]]**2))
-                print('bond dim: max size truncate',chi[ii])
+                if pp == 0:
+                    print('bond dim: max size truncate',chi[ii])
+                pp = 1
+            
             aa = 0
             for ff in range(0,chi[ii]): #remove small schmidt values
                 if aa == 0:
@@ -171,12 +175,14 @@ for step in range(0,times):
             Z = np.transpose(Z,(1,0,2)) #maps to (d,chi_i,D3)
             
             G[ii+1] = Z  
-            
+           
             if chi[ii] > chiM: #truncate bonddimension 
                 chi[ii] = chiM
                 l[ii]= Y[0:chi[ii]]/np.sqrt(sum(Y[0:chi[ii]]**2))
-                print('bond dim: max size truncate',chi[ii])
-          
+                if pp == 0:
+                    print('bond dim: max size truncate',chi[ii])
+                pp = 1 
+            
             aa = 0
             for ff in range(0,chi[ii]): #remove small schmidt values
                 if aa == 0:

@@ -15,11 +15,12 @@ import matplotlib.pyplot as plt
 
 ##################################################
 #Control Panel
-cycle_times = 5000 #cycle_times*delta = physical simulation time
+cycle_times = 1000 #cycle_times*delta = physical simulation time
 times = 3*cycle_times #number of steps
-chiM = 15 #max bond dimension
+chiM = 30 #max bond dimension
 d = 2; #physical dimension
 delta =0.01; #time-step 
+cut_off = 10**(-12)
 
 #Hamiltonian Parameters
 J = 1.0
@@ -131,7 +132,7 @@ for step in range(0,times):
     aa = 0
     for ff in range(0,chiA): #remove small schmidt values
         if aa == 0:
-            if (l[A][ff] < 10**(-15)):
+            if (l[A][ff] < cut_off):
                 chiA = ff
                 l[A]= l[A][0:chiA]/np.sqrt(sum(l[A][0:chiA]**2))
                 aa = 1 
@@ -198,7 +199,7 @@ if plotting == 1:
 
     #MPO-W1
     mpo_mag = np.genfromtxt('/home/samuel/ITensor-3/sample/mpoW_magz.txt')
-    mpo_corr = np.genfromtxt('/home/samuel/ITensor-3/sample/mpoW_corrz.txt')
+    mpo_corr = np.genfromtxt('/home/samuel/ITensor-3/sample/mpoW_corrz_centre.txt')
     mpo_entropy = np.genfromtxt('/home/samuel/ITensor-3/sample/mpoW_entropy.txt')
     mpo_obs = np.genfromtxt('/home/samuel/ITensor-3/sample/mpoW_obs.txt')
     dt_mpo = 0.01
