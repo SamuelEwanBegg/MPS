@@ -1,6 +1,6 @@
 #iTEBD2 
 #Author: Samuel Begg, contractions based on code of Frank Pollman and original paper of Vidal
-#Date: 08/09/2020
+#Date: 11/09/2020
 #2nd order trotter [O(dt^3) accuracy] + adaptive bond dimension size + schmidt cut-off
 
 import MPS_methods as mps
