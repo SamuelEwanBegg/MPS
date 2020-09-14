@@ -15,20 +15,21 @@ import matplotlib.pyplot as plt
 
 ##################################################
 #Control Panel
-cycle_times = 1000 #cycle_times*delta = physical simulation time
+cycle_times = 500 #cycle_times*delta = physical simulation time
 times = 3*cycle_times #number of steps
 chiM = 30 #max bond dimension
 d = 2; #physical dimension
 delta =0.01; #time-step 
-cut_off = 10**(-12)
+cut_off = 10**(-15)
 
 #Hamiltonian Parameters
 J = 1.0
 Jx = 0.5
 Jy = 1.3
-hx = 0.0
+hx = 2.0
 
 plotting = 1 #generate plots = 1, no plots = 0
+save = 1 #save data = 1, no save = 0
 ###########################################################################
 #Initialize MPS
 
@@ -177,8 +178,18 @@ for step in range(0,times):
         kk = kk + 1
 
 
+if save == 1:
+    np.save('iTEBD_results/norm',norm)
+    np.save('iTEBD_results/mag',mag)
+    np.save('iTEBD_results/corrz',obs)
+    np.save('iTEBD_results/corrx',obs2)
+    np.save('iTEBD_results/entropy_centre',entang)
+
 #Plot Results
 if plotting == 1:
+    tebd = np.load('mag.npy')
+    plt.plot(0.01*np.arange(1,np.size(tebd)+1),tebd,'s',label='TEBD mag')
+
     plt.plot(delta*np.arange(1,np.size(mag)+1),norm,'o',label = 'N')
     plt.plot(delta*np.arange(1,np.size(mag)+1),obs,'o',label = 'ZZ')
     plt.plot(delta*np.arange(1,np.size(mag)+1),obs2,'om',label = 'XX')
