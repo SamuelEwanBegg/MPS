@@ -12,18 +12,69 @@ Sz = 0.5*np.asarray([[1.0,0],[0,-1.0]])
 
 #############################################################################################
 #Methods for MPS
-
 def random_state(physical,sites,bond): 
-	 #Generate a random matrix product state
-	inputMPS = []
-	d_dim = np.zeros(sites,dtype = 'I')
-	for kk in range(0,sites):
-		d_dim[kk] = bond	
-	inputMPS.append(rand.normal(0,(1.0/float(sites)),[physical,1,d_dim[0]]))
-	for kk in range(1,sites-1):
-		inputMPS.append(rand.normal(0,(1.0/float(sites)),[physical,d_dim[kk-1],d_dim[kk]]))
-	inputMPS.append(rand.normal(0,(1.0/float(sites)),[physical,d_dim[sites-1],1]))
-	return inputMPS
+         #Generate a random matrix product state
+        inputMPS = []
+        d_dim = np.zeros(sites,dtype = 'I')
+        for kk in range(0,sites):
+                d_dim[kk] = bond	
+        inputMPS.append(rand.normal(0,(1.0/float(sites)),[physical,1,d_dim[0]]))
+        for kk in range(1,sites-1):
+                inputMPS.append(rand.normal(0,(1.0/float(sites)),[physical,d_dim[kk-1],d_dim[kk]]))
+        inputMPS.append(rand.normal(0,(1.0/float(sites)),[physical,d_dim[sites-1],1]))
+        return inputMPS
+
+##################################################################################
+#Act on l matrices, unclear which class to join to
+
+def entangle_entropy(bondmat):
+    a = copy.deepcopy(bondmat)
+    summer = 0
+    cheke = 0
+    for kk in range(0,np.size(bondmat)):
+        cheke = cheke + a[kk]**2
+        summer = summer  - a[kk]**2*(np.log(a[kk]**2))
+    return summer
+
+#Requires U,S,Vh and cut-off
+
+def bond_element_cutoff(U,S,Vh,bond_cutoff):
+    checker = 0
+    for kk in range(0,np.size(S,0)):
+        if checker == 0:
+            if S[kk] < bond_cutoff:
+                checker = 1
+                eff_dim = kk
+                S_new = S[0:eff_dim]
+                U_new = U[:,0:eff_dim]		
+                Vh_new = Vh[0:eff_dim,:]
+
+    if checker == 0: #if no elements cutoff 
+        U_new = U
+        S_new = S
+        Vh_new = Vh
+
+    return U_new,S_new,Vh_new
+
+#Requires U,S,Vh and bond-dim
+
+def bond_truncation(bond_dim,U,S,Vh):
+
+    if np.size(S) > bond_dim:
+            S_new = S[0:bond_dim]
+            U_new = U[:,0:bond_dim]		
+            Vh_new = Vh[0:bond_dim,:]
+
+    else: 
+
+        U_new = U
+        S_new = S
+        Vh_new = Vh
+
+    return U_new, S_new, Vh_new
+
+
+
 
 def Left_Canonical_Check(MPS):
     
@@ -172,55 +223,6 @@ def Magnetisation_LEFTZIP(MPS):
     mag = np.mean(szloc)
 
     return mag
-
-##################################################################################
-#Act on l matrices, unclear which class to join to
-
-def entangle_entropy(bondmat):
-    a = copy.deepcopy(bondmat)
-    summer = 0
-    cheke = 0
-    for kk in range(0,np.size(bondmat)):
-        cheke = cheke + a[kk]**2
-        summer = summer  - a[kk]**2*(np.log(a[kk]**2))
-    return summer
-
-#Requires U,S,Vh and cut-off
-
-def bond_element_cutoff(U,S,Vh,bond_cutoff):
-    checker = 0
-    for kk in range(0,np.size(S,0)):
-        if checker == 0:
-            if S[kk] < bond_cutoff:
-                checker = 1
-                eff_dim = kk
-                S_new = S[0:eff_dim]
-                U_new = U[:,0:eff_dim]		
-                Vh_new = Vh[0:eff_dim,:]
-
-    if checker == 0: #if no elements cutoff 
-        U_new = U
-        S_new = S
-        Vh_new = Vh
-
-    return U_new,S_new,Vh_new
-
-#Requires U,S,Vh and bond-dim
-
-def bond_truncation(bond_dim,U,S,Vh):
-
-    if np.size(S) > bond_dim:
-            S_new = S[0:bond_dim]
-            U_new = U[:,0:bond_dim]		
-            Vh_new = Vh[0:bond_dim,:]
-
-    else: 
-
-        U_new = U
-        S_new = S
-        Vh_new = Vh
-
-    return U_new, S_new, Vh_new
 
 ################################################################################################
 
