@@ -21,20 +21,20 @@ Sz = 0.5*np.asarray([[1.0,0],[0,-1.0]])
 ##################################################################
 #Control Panel
 
-cycle_times = 50 #cycle_times*delta = physical simulation time
+cycle_times = 1000 #cycle_times*delta = physical simulation time
 times = 3*cycle_times #number of steps
-chiM = 10 #max bond dimension
+chiM = 50 #max bond dimension
 d = 2; #physical dimension
-delta = 0.1; #time-step 
-N = 100 #system size
+delta = 0.01; #time-step 
+N = 25 #system size
 cut = int(N/2)-1 #measure entanglement, schimdt values
 cut_off =  10**(-15) #Discard singular values smaller than this.
 
-#OBC Nearest-Neighbour Hamiltonian Parameters
+#OBC Nearest-Neighbour Hamiltonian Parameters (x-1 as ferromagnetic signs, see H below)
 J = 1.0
-Jx = 0.5
-Jy = 1.3
-hx = 2.0
+Jx = 0
+Jy = 0
+hx = 0.4
 
 plotting = 1 #Would you like to observe results? Yes:1, No:0
 save = 1 #Would you like to save results? Yes:1, No:0
@@ -48,8 +48,8 @@ chi = []  #List of bond-dimensions size
 for ii in range(0,N):
     G = G +  [np.asarray(np.zeros((d,1,1),dtype = complex))]
     l = l + [[1.0]]
-    G[ii][0,0,0]=1.0
-    G[ii][1,0,0]=0.0
+    G[ii][0,0,0]=0.0
+    G[ii][1,0,0]=1.0
     chi = chi + [np.size(l[ii])]
     #Can also initialize random tensor
     #G = G + [np.random.rand(d,2,2)] 
@@ -81,6 +81,7 @@ Uf_right = np.reshape(lin.expm(-1j*H_right*delta) ,(2,2,2,2))
 
 norm = np.zeros(cycle_times)
 mag = np.zeros(cycle_times,dtype = complex)
+overlap = np.zeros(cycle_times,dtype = complex)
 obs = np.zeros(cycle_times,dtype = complex)
 obs2 = np.zeros(cycle_times)
 obs3 = np.zeros(cycle_times)
@@ -189,29 +190,31 @@ for step in range(0,times):
 
     if np.mod(step,3)==2: #After succession of 3-gates (1 time-step) evaluate observables 
 
-        G = mps.Inversion(G)
-        G,schmidt,normer = mps.Canonicalise(G,chiM*2+1,1)
-        G = mps.Inversion(G)
+    	G = mps.Inversion(G)
+    	G,schmidt,normer = mps.Canonicalise(G,chiM*2+1,1)
+    	G = mps.Inversion(G)
 
-        obs[kk] = mps.Observable_two_site_LEFTZIP(G,Sz,cut,Sz,cut+1)
-        norm[kk] = mps.Normalisation_LEFTZIP(G)
-        mag[kk] = mps.Magnetisation_LEFTZIP(G)
-        obs2[kk] = mps.Observable_two_site_LEFTZIP(G,Sx,cut,Sx,cut+1)
-        obs3[kk] = mps.Observable_two_site_LEFTZIP(G,Sz,cut,np.identity(2),cut+1)
-        obs4[kk] = mps.Observable_two_site_LEFTZIP(G,Sz,0,np.identity(2),1)
-        obs5[kk] = mps.Observable_two_site_LEFTZIP(G,Sz,0,Sz,1)
-        obs6[kk] = mps.Observable_one_site_LEFTZIP(G,Sz,N-1)
-        entang[kk] = -np.sum((np.square(l[cut]))*np.log(np.square(l[cut])))
-        largest[kk] = np.max(l[cut])    
-        mini[kk] = np.min(l[cut])    
-        sums[kk] = np.sum(np.square(l[cut]))    
-        kk = kk + 1
+    	obs[kk] = mps.Observable_two_site_LEFTZIP(G,Sz,cut,Sz,cut+1)
+    	norm[kk] = mps.Normalisation_LEFTZIP(G)
+    	mag[kk] = mps.Magnetisation_LEFTZIP(G)
+    	overlap[kk] = mps.Overlap(G)
+    	obs2[kk] = mps.Observable_two_site_LEFTZIP(G,Sx,cut,Sx,cut+1)
+    	obs3[kk] = mps.Observable_two_site_LEFTZIP(G,Sz,cut,np.identity(2),cut+1)
+    	obs4[kk] = mps.Observable_two_site_LEFTZIP(G,Sz,0,np.identity(2),1)
+    	obs5[kk] = mps.Observable_two_site_LEFTZIP(G,Sz,0,Sz,1)
+    	obs6[kk] = mps.Observable_one_site_LEFTZIP(G,Sz,N-1)
+    	entang[kk] = -np.sum((np.square(l[cut]))*np.log(np.square(l[cut])))
+    	largest[kk] = np.max(l[cut])    
+    	mini[kk] = np.min(l[cut])    
+    	sums[kk] = np.sum(np.square(l[cut]))    
+    	kk = kk + 1
 
 
 ##################################################################
 #Plot Analysis
 if save ==1: 
     np.save('TEBD_results/mag.npy',mag)
+    np.save('TEBD_results/ov_down.npy',overlap)
     np.save('TEBD_results/norm.npy',norm)
     np.save('TEBD_results/corr_centre.npy',obs)
 
@@ -219,6 +222,7 @@ if save ==1:
 if plotting == 1:
    
     #Results
+    plt.plot(delta*np.arange(1,np.size(mag)+1),(overlap*np.conj(overlap))**(1/N),'og',label = 'L')
     plt.plot(delta*np.arange(1,np.size(mag)+1),norm,'or',label = 'N')
     #plt.plot(delta*np.arange(1,np.size(mag)+1),obs,'o',label = 'ZZ')
     plt.plot(delta*np.arange(1,np.size(mag)+1),mag,'or',label = 'M')

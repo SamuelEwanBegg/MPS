@@ -224,6 +224,14 @@ def Magnetisation_LEFTZIP(MPS):
 
     return mag
 
+def Overlap(MPS): #must manually choose correct element to overlap with. Down state here.
+
+    running = MPS[0][1,:,:] 
+    for kk in range(1,len(MPS)):
+    	running = np.dot(running,MPS[kk][1,:,:])	
+		
+    return running[0,0]
+
 ################################################################################################
 
 #Methods for iMPS
