@@ -135,10 +135,10 @@ def Canonicalise(inputMPS,bond_dim,normalise_output): #Left canonical
             else:
                     outputMPS.append(np.reshape(U,(np.size(tempMPS,0),np.size(tempMPS,1),np.size(S,0))))   #sigma,d1 and the new bond dimension
                     del(tempMPS)
-            tempMPS = np.zeros([physical,np.size(S),np.size(inputMPS[kk+1],2)],dtype = complex)
+            tempMPS = np.zeros([physical,np.size(S),np.size(inputMPS[(kk+1)%sites],2)],dtype = complex)
 
-            tempMPS[0,:,:] = np.dot(np.dot(np.diag(S),Vh),inputMPS[kk+1][0,:,:])  #MA becomes the new A
-            tempMPS[1,:,:] = np.dot(np.dot(np.diag(S),Vh),inputMPS[kk+1][1,:,:])  #MA becomes the new A
+            tempMPS[0,:,:] = np.dot(np.dot(np.diag(S),Vh),inputMPS[(kk+1)%sites][0,:,:])  #MA becomes the new A
+            tempMPS[1,:,:] = np.dot(np.dot(np.diag(S),Vh),inputMPS[(kk+1)%sites][1,:,:])  #MA becomes the new A
 
     #Last site
     del(Ashaped,U,S,Vh)
@@ -152,6 +152,55 @@ def Canonicalise(inputMPS,bond_dim,normalise_output): #Left canonical
 
     return [outputMPS,schmidt_values,norm]
 
+def Canonicalise_pbc(inputMPS,bond_dim,normalise_output): #Left canonical
+    
+    sites = len(inputMPS)
+    physical = np.size(inputMPS[0][:,0,0])
+    #Canonicalises MPS in left canonical form, normalised but also outputs the norm 
+    outputMPS = []
+    schmidt_values = []
+
+     
+    for kk in range(0,sites): #all sites except last dealt with in loop
+            if kk == 0:	
+                    Ashaped = inputMPS[kk].reshape((np.size(inputMPS[kk],0)*np.size(inputMPS[kk],1),np.size(inputMPS[kk],2)))
+            else:
+                    del(Ashaped,U,S,Vh) 
+                    Ashaped = tempMPS.reshape((np.size(tempMPS,0)*np.size(tempMPS,1),np.size(tempMPS,2)))
+                    
+            U,S,Vh = lin.svd(Ashaped,full_matrices = False)		
+
+            if np.size(S) > bond_dim:
+                    S_new = S[0:bond_dim]
+                    U_new = U[:,0:bond_dim]		
+                    Vh_new = Vh[0:bond_dim,:]
+                    S = S_new
+                    U = U_new
+                    Vh = Vh_new
+            
+
+            schmidt_values.append(S)
+            if kk == 0:
+                    outputMPS.append(np.reshape(U,(np.size(inputMPS[kk],0),np.size(inputMPS[kk],1),np.size(S,0))))   #sigma,d1 and the new bond dimension
+            else:
+                    outputMPS.append(np.reshape(U,(np.size(tempMPS,0),np.size(tempMPS,1),np.size(S,0))))   #sigma,d1 and the new bond dimension
+                    del(tempMPS)
+            tempMPS = np.zeros([physical,np.size(S),np.size(inputMPS[(kk+1)%sites],2)],dtype = complex)
+
+            tempMPS[0,:,:] = np.dot(np.dot(np.diag(S),Vh),inputMPS[(kk+1)%sites][0,:,:])  #MA becomes the new A
+            tempMPS[1,:,:] = np.dot(np.dot(np.diag(S),Vh),inputMPS[(kk+1)%sites][1,:,:])  #MA becomes the new A
+
+    #Last site
+    del(Ashaped,U,S,Vh)
+    Ashaped = tempMPS.reshape((np.size(tempMPS,0)*np.size(tempMPS,1),np.size(tempMPS,2)))
+    U,S,Vh = lin.svd(Ashaped,full_matrices = False)
+    outputMPS.append(np.reshape(U,(np.size(tempMPS,0),np.size(tempMPS,1),np.size(S,0))))   #sigma,d1 and the new bond dimension
+    norm = S*Vh
+    if normalise_output == 0:  #Does not normalise (multiplies normalised result by its norm)
+            outputMPS[sites-1][:,:,0] = (norm)*outputMPS[sites-1][:,:,0]	
+    #Note that the last site A = U S Vh was defined as U with S Vh ignored since they are just the norm 
+
+    return [outputMPS,schmidt_values,norm]
 
 def Observable_one_site_LEFTZIP(MPS,Obs1,site1):  #Does not assume canonical form but zips from left.
     
@@ -336,10 +385,10 @@ def Canonicalise_Parallel(inputMPS,bond_dim,normalise_output):#left canonical bu
 		else:
 			outputMPS.append(np.reshape(U,(np.size(tempMPS,0),np.size(tempMPS,1),np.size(S,0))))   #sigma,d1 and the new bond dimension
 			del(tempMPS)
-		tempMPS = np.zeros([physical,np.size(S),np.size(inputMPS[kk+1],2)],dtype = complex)
+		tempMPS = np.zeros([physical,np.size(S),np.size(inputMPS[(kk+1)%sites],2)],dtype = complex)
 
-		tempMPS[0,:,:] = np.dot(np.dot(np.diag(S),Vh),inputMPS[kk+1][0,:,:])  #MA becomes the new A
-		tempMPS[1,:,:] = np.dot(np.dot(np.diag(S),Vh),inputMPS[kk+1][1,:,:])  #MA becomes the new A
+		tempMPS[0,:,:] = np.dot(np.dot(np.diag(S),Vh),inputMPS[(kk+1)%sites][0,:,:])  #MA becomes the new A
+		tempMPS[1,:,:] = np.dot(np.dot(np.diag(S),Vh),inputMPS[(kk+1)%sites][1,:,:])  #MA becomes the new A
 
 	#Last site
 	del(Ashaped,U,S,Vh)

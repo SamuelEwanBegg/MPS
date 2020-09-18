@@ -98,7 +98,7 @@ for step in range(0,times):
     print(step)
     
     for ii in range(0,N):
-
+        #print(ii,np.shape(G[ii]),np.shape(G[(ii+1)%N]),np.shape(G[(ii+2)%N]))
         theta = np.tensordot(G[ii],G[(ii+1)%N],axes=((2),(1))) #theta dims. d D1 d D3
 
         if np.mod(step,3) == 1: #Even Gates
@@ -167,16 +167,16 @@ for step in range(0,times):
              
     
     #After each application performs the right-sweep of canonicalisation. Appears to be necessary to prevent issues with schmidt values on site 0, despite not needed for observables.
-    G = mps.Inversion(G)
-    G,schmidt,normer = mps.Canonicalise(G,chiM*2+1,1)
-    G = mps.Inversion(G)
+    #Inversion will work for pbc. Canonicalise may not.
+    print(step,0,np.shape(G[24]),np.shape(G[0]),np.shape(G[1]))
+    #G = mps.Inversion(G)
+    G,schmidt,normer = mps.Canonicalise_pbc(G,chiM*2+1,1)
+    #G = mps.Inversion(G)
+    print(step,0,np.shape(G[24]),np.shape(G[0]),np.shape(G[1]))
 
 
     if np.mod(step,3)==2: #After succession of 3-gates (1 time-step) evaluate observables 
 
-    	G = mps.Inversion(G)
-    	G,schmidt,normer = mps.Canonicalise(G,chiM*2+1,1)
-    	G = mps.Inversion(G)
 
     	obs[kk] = mps.Observable_two_site_LEFTZIP(G,Sz,cut,Sz,cut+1)
     	norm[kk] = mps.Normalisation_LEFTZIP(G)
@@ -220,14 +220,14 @@ if ED_plots == 1:
     plt.plot(delta*np.arange(1,np.size(mag)+1),(overlap*np.conj(overlap))**(1/N),'or',label = 'L')
     plt.plot(delta*np.arange(1,np.size(mag)+1),norm,'or',label = 'N')
     #plt.plot(delta*np.arange(1,np.size(mag)+1),obs,'o',label = 'ZZ')
-    plt.plot(delta*np.arange(1,np.size(mag)+1),mag,'or',label = 'M')
-    plt.plot(delta*np.arange(1,np.size(mag)+1),obs3,'pr',label = 'Mcentre')
+    #plt.plot(delta*np.arange(1,np.size(mag)+1),mag,'or',label = 'M')
+    #plt.plot(delta*np.arange(1,np.size(mag)+1),obs3,'pr',label = 'Mcentre')
     plt.plot(delta*np.arange(1,np.size(mag)+1),obs4,'sr',label = 'Mleft')
-    plt.plot(delta*np.arange(1,np.size(mag)+1),obs6,'xr',label = 'Mright')
+    #plt.plot(delta*np.arange(1,np.size(mag)+1),obs6,'xr',label = 'Mright')
     plt.plot(delta*np.arange(1,np.size(mag)+1),obs5,'sr',label = 'ZZleft')
-    plt.plot(delta*np.arange(1,np.size(mag)+1),obs,'or',label = 'ZZ')
-    plt.plot(delta*np.arange(1,np.size(mag)+1),obs2,'or',label = 'XX')
-    plt.plot(delta*np.arange(1,np.size(mag)+1),entang,'or',label = 'S')
+    #plt.plot(delta*np.arange(1,np.size(mag)+1),obs,'or',label = 'ZZcut')
+    #plt.plot(delta*np.arange(1,np.size(mag)+1),obs2,'or',label = 'XXcut')
+    plt.plot(delta*np.arange(1,np.size(mag)+1),entang,'or',label = 'Scut')
     
     plt.xlim(0,delta*cycle_times)
     plt.legend()
