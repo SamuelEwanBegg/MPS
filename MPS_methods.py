@@ -152,7 +152,7 @@ def Canonicalise(inputMPS,bond_dim,normalise_output): #Left canonical
 
     return [outputMPS,schmidt_values,norm]
 
-def Canonicalise_pbc(inputMPS,bond_dim,normalise_output): #Left canonical
+def Canonicalise_pbc(inputMPS,bond_dim,normalise_output,cut_off): #Left canonical
     
     sites = len(inputMPS)
     physical = np.size(inputMPS[0][:,0,0])
@@ -177,7 +177,17 @@ def Canonicalise_pbc(inputMPS,bond_dim,normalise_output): #Left canonical
                     S = S_new
                     U = U_new
                     Vh = Vh_new
-            
+            aa = 0 
+            for ff in range(0,np.size(S)): #remove small schmidt values
+            	if aa == 0:
+                	if (S[ff] < cut_off):
+                        	S = S[0:ff]/np.sqrt(sum(S[0:ff]**2))
+                        	aa = 1 
+			        #print('bond dim: small elements truncate',chi[ii])
+                        	U_new = U[:,0:ff]		
+                        	Vh_new = Vh[0:ff,:]
+                        	U = U_new
+                        	Vh = Vh_new
 
             schmidt_values.append(S)
             if kk == 0:
@@ -185,20 +195,21 @@ def Canonicalise_pbc(inputMPS,bond_dim,normalise_output): #Left canonical
             else:
                     outputMPS.append(np.reshape(U,(np.size(tempMPS,0),np.size(tempMPS,1),np.size(S,0))))   #sigma,d1 and the new bond dimension
                     del(tempMPS)
+            #print(sites,'HELLO')
+            #print((kk+1)%sites,'printer')
             tempMPS = np.zeros([physical,np.size(S),np.size(inputMPS[(kk+1)%sites],2)],dtype = complex)
-
             tempMPS[0,:,:] = np.dot(np.dot(np.diag(S),Vh),inputMPS[(kk+1)%sites][0,:,:])  #MA becomes the new A
             tempMPS[1,:,:] = np.dot(np.dot(np.diag(S),Vh),inputMPS[(kk+1)%sites][1,:,:])  #MA becomes the new A
-
-    #Last site
-    del(Ashaped,U,S,Vh)
-    Ashaped = tempMPS.reshape((np.size(tempMPS,0)*np.size(tempMPS,1),np.size(tempMPS,2)))
-    U,S,Vh = lin.svd(Ashaped,full_matrices = False)
-    outputMPS.append(np.reshape(U,(np.size(tempMPS,0),np.size(tempMPS,1),np.size(S,0))))   #sigma,d1 and the new bond dimension
-    norm = S*Vh
-    if normalise_output == 0:  #Does not normalise (multiplies normalised result by its norm)
-            outputMPS[sites-1][:,:,0] = (norm)*outputMPS[sites-1][:,:,0]	
-    #Note that the last site A = U S Vh was defined as U with S Vh ignored since they are just the norm 
+    
+    #normalize S
+    S =  S/np.sqrt(sum(S**2))  
+    norm = np.dot(np.diag(S),Vh)
+    #if np.size(norm) > 1:
+    	#outputMPS[0] = np.transpose(np.tensordot(norm*outputMPS[0],axes = ((1),(1))),(1,0,2))	
+    X = np.tensordot(norm,outputMPS[0],axes = ((1),(1)))	
+    #Note that the last site A = U S Vh was defined as U with S Vh ignored since they are just the norm
+   
+    outputMPS[0]= np.transpose(X,(1,0,2))	
 
     return [outputMPS,schmidt_values,norm]
 
@@ -221,9 +232,30 @@ def Observable_one_site_LEFTZIP(MPS,Obs1,site1):  #Does not assume canonical for
 
                 left_site = new_left_up + new_left_down 
 
-    obs = np.real(left_site[0,0])
+    obs = np.trace(left_site)
     return obs
 
+def Observable_two_site_LEFTZIP_pbc(MPS,Obs1,site1,Obs2,site2):  #Does not assume canonical form but zips from left.
+    
+    ii = 0
+    if site1 == 0:
+        left_site = Obs1[0,0]*np.dot(np.conj(np.transpose(MPS[ii][0,:,:])),MPS[ii][0,:,:]) + Obs1[1,1]*np.dot(np.conj(np.transpose(MPS[ii][1,:,:])),MPS[ii][1,:,:]) + Obs1[0,1]*np.dot(np.conj(np.transpose(MPS[ii][1,:,:])),MPS[ii][0,:,:]) + Obs1[1,0]*np.dot(np.conj(np.transpose(MPS[ii][0,:,:])),MPS[ii][1,:,:])
+    else:
+        left_site = np.dot(np.conj(np.transpose(MPS[ii][0,:,:])),MPS[ii][0,:,:]) + np.dot(np.conj(np.transpose(MPS[ii][1,:,:])),MPS[ii][1,:,:])
+
+    for jj in range(1,len(MPS)):
+
+            if jj == site1:
+                left_site =  Obs1[0,0]*np.dot(np.conj(np.transpose(MPS[jj][0,:,:])),np.dot(left_site,MPS[jj][0,:,:])) +  Obs1[1,1]*np.dot(np.conj(np.transpose(MPS[jj][1,:,:])),np.dot(left_site,MPS[jj][1,:,:])) +  Obs1[1,0]*np.dot(np.conj(np.transpose(MPS[jj][1,:,:])),np.dot(left_site,MPS[jj][0,:,:])) + Obs1[0,1]*np.dot(np.conj(np.transpose(MPS[jj][0,:,:])),np.dot(left_site,MPS[jj][1,:,:]))    
+            elif jj == site2:
+                left_site =  Obs2[0,0]*np.dot(np.conj(np.transpose(MPS[jj][0,:,:])),np.dot(left_site,MPS[jj][0,:,:])) +  Obs2[1,1]*np.dot(np.conj(np.transpose(MPS[jj][1,:,:])),np.dot(left_site,MPS[jj][1,:,:])) +  Obs2[1,0]*np.dot(np.conj(np.transpose(MPS[jj][1,:,:])),np.dot(left_site,MPS[jj][0,:,:])) + Obs2[0,1]*np.dot(np.conj(np.transpose(MPS[jj][0,:,:])),np.dot(left_site,MPS[jj][1,:,:]))  
+            else:
+                new_left_up = np.dot(np.conj(np.transpose(MPS[jj][0,:,:])),np.dot(left_site,MPS[jj][0,:,:]))
+                new_left_down = np.dot(np.conj(np.transpose(MPS[jj][1,:,:])),np.dot(left_site,MPS[jj][1,:,:])) #Bond contraction for down index
+
+                left_site = new_left_up + new_left_down 
+    obs = np.trace(left_site)
+    return obs
 
 def Observable_two_site_LEFTZIP(MPS,Obs1,site1,Obs2,site2):  #Does not assume canonical form but zips from left.
     
@@ -278,8 +310,9 @@ def Overlap(MPS): #must manually choose correct element to overlap with. Down st
     running = MPS[0][1,:,:] 
     for kk in range(1,len(MPS)):
     	running = np.dot(running,MPS[kk][1,:,:])	
-		
-    return running[0,0]
+    
+    overlap = np.trace(running)	
+    return overlap
 
 ################################################################################################
 

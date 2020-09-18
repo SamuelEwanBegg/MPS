@@ -21,14 +21,14 @@ Sz = 0.5*np.asarray([[1.0,0],[0,-1.0]])
 ##################################################################
 #Control Panel
 
-cycle_times = 50 #cycle_times*delta = physical simulation time
+cycle_times = 300 #cycle_times*delta = physical simulation time
 times = 3*cycle_times #number of steps
-chiM = 30 #max bond dimension
+chiM = 10 #max bond dimension
 d = 2; #physical dimension
-delta = 0.1; #time-step 
-N = 25 #system size
+delta = 0.01; #time-step 
+N = 7 #system size
 cut = int(N/2)-1 #measure entanglement, schimdt values
-cut_off =  10**(-15) #Discard singular values smaller than this.
+cut_off =  10**(-2) #Discard singular values smaller than this.
 
 #PBC Nearest-Neighbour Hamiltonian Parameters (x-1 as ferromagnetic signs, see H below)
 J = 1.0
@@ -98,9 +98,12 @@ for step in range(0,times):
     print(step)
     
     for ii in range(0,N):
-        #print(ii,np.shape(G[ii]),np.shape(G[(ii+1)%N]),np.shape(G[(ii+2)%N]))
-        theta = np.tensordot(G[ii],G[(ii+1)%N],axes=((2),(1))) #theta dims. d D1 d D3
+        print(chi[(ii-1)%N],chi[(ii+1)%N])
 
+        print(np.shape(G[ii]),np.shape(G[(ii+1)%N]))
+
+        theta = np.tensordot(G[ii],G[(ii+1)%N],axes=((2),(1))) #theta dims. d D1 d D3
+        print(np.shape(theta),'the',ii)
         if np.mod(step,3) == 1: #Even Gates
             
             if ii%2 == 1:
@@ -132,6 +135,8 @@ for step in range(0,times):
 
 
         #Move to d*D1 and d*D3
+        #print(chi[(ii-1)%N],chi[(ii+1)%N])
+        #print(np.shape(theta))
         theta = np.reshape(theta,(d*chi[(ii-1)%N],d*chi[(ii+1)%N])); #combine bond indices and site indices to create matrix (dxD1,dxD3) 
         X, Y, Z = np.linalg.svd(theta,full_matrices = False)  #U,S,Vh. dims (d x D1 , chi) (chi,chi) and (chi, dxD3)
 
@@ -165,28 +170,32 @@ for step in range(0,times):
         
         del X,Y,Z 
              
-    
+ 
     #After each application performs the right-sweep of canonicalisation. Appears to be necessary to prevent issues with schmidt values on site 0, despite not needed for observables.
     #Inversion will work for pbc. Canonicalise may not.
-    print(step,0,np.shape(G[24]),np.shape(G[0]),np.shape(G[1]))
-    #G = mps.Inversion(G)
-    G,schmidt,normer = mps.Canonicalise_pbc(G,chiM*2+1,1)
-    #G = mps.Inversion(G)
-    print(step,0,np.shape(G[24]),np.shape(G[0]),np.shape(G[1]))
+    #print(step,0,np.shape(G[N-1]),np.shape(G[0]),np.shape(G[1]))
+    G = mps.Inversion(G)
+    G,schmidt,normer = mps.Canonicalise_pbc(G,chiM*2+1,1,cut_off)
+    G = mps.Inversion(G)
+    G,l,normer = mps.Canonicalise_pbc(G,chiM*2+1,1,cut_off)
 
+    for pp in range(0,len(G)):
+        chi[(pp-1)%N]=np.size(G[pp][0,:,:],0)
 
+ 
     if np.mod(step,3)==2: #After succession of 3-gates (1 time-step) evaluate observables 
 
 
-    	obs[kk] = mps.Observable_two_site_LEFTZIP(G,Sz,cut,Sz,cut+1)
-    	norm[kk] = mps.Normalisation_LEFTZIP(G)
+    	obs[kk] = mps.Observable_two_site_LEFTZIP_pbc(G,Sz,cut,Sz,cut+1)
+    	norm[kk] = mps.Observable_two_site_LEFTZIP_pbc(G,np.identity(2),0,np.identity(2),1)
     	mag[kk] = mps.Magnetisation_LEFTZIP(G)
     	overlap[kk] = mps.Overlap(G)
-    	obs2[kk] = mps.Observable_two_site_LEFTZIP(G,Sx,cut,Sx,cut+1)
-    	obs3[kk] = mps.Observable_two_site_LEFTZIP(G,Sz,cut,np.identity(2),cut+1)
-    	obs4[kk] = mps.Observable_two_site_LEFTZIP(G,Sz,0,np.identity(2),1)
-    	obs5[kk] = mps.Observable_two_site_LEFTZIP(G,Sz,0,Sz,1)
-    	obs6[kk] = mps.Observable_one_site_LEFTZIP(G,Sz,N-1)
+    	obs2[kk] = mps.Observable_two_site_LEFTZIP_pbc(G,Sx,cut,Sx,cut+1)
+    	obs3[kk] = mps.Observable_two_site_LEFTZIP_pbc(G,Sz,cut,np.identity(2),cut+1)
+    	obs4[kk] = mps.Observable_two_site_LEFTZIP_pbc(G,Sz,0,np.identity(2),1)
+    	obs5[kk] = mps.Observable_two_site_LEFTZIP_pbc(G,Sz,0,Sz,1)
+    	obs6[kk] = mps.Observable_two_site_LEFTZIP_pbc(G,Sz,N-1,np.identity(2),0)
+    	#obs6[kk] = mps.Observable_one_site_LEFTZIP(G,Sz,N-1)
     	entang[kk] = -np.sum((np.square(l[cut]))*np.log(np.square(l[cut])))
     	largest[kk] = np.max(l[cut])    
     	mini[kk] = np.min(l[cut])    
@@ -196,6 +205,12 @@ for step in range(0,times):
 
 ##################################################################
 #Plot Analysis
+#plt.plot(largest)
+#plt.plot(mini)
+#plt.plot(sums)
+#plt.plot(entang)
+#plt.show()
+
 if save ==1: 
     np.save('TEBD_results/mag.npy',mag)
     np.save('TEBD_results/ov_down.npy',overlap)
@@ -220,11 +235,11 @@ if ED_plots == 1:
     plt.plot(delta*np.arange(1,np.size(mag)+1),(overlap*np.conj(overlap))**(1/N),'or',label = 'L')
     plt.plot(delta*np.arange(1,np.size(mag)+1),norm,'or',label = 'N')
     #plt.plot(delta*np.arange(1,np.size(mag)+1),obs,'o',label = 'ZZ')
-    #plt.plot(delta*np.arange(1,np.size(mag)+1),mag,'or',label = 'M')
-    #plt.plot(delta*np.arange(1,np.size(mag)+1),obs3,'pr',label = 'Mcentre')
-    plt.plot(delta*np.arange(1,np.size(mag)+1),obs4,'sr',label = 'Mleft')
-    #plt.plot(delta*np.arange(1,np.size(mag)+1),obs6,'xr',label = 'Mright')
-    plt.plot(delta*np.arange(1,np.size(mag)+1),obs5,'sr',label = 'ZZleft')
+    plt.plot(delta*np.arange(1,np.size(mag)+1),mag,'or',label = 'M')
+    plt.plot(delta*np.arange(1,np.size(mag)+1),obs3,'pr',label = 'Mcentre')
+    plt.plot(delta*np.arange(1,np.size(mag)+1),obs4,'sg',label = 'Mleft')
+    plt.plot(delta*np.arange(1,np.size(mag)+1),obs6,'xg',label = 'Mright')
+    #plt.plot(delta*np.arange(1,np.size(mag)+1),obs5,'sr',label = 'ZZleft')
     #plt.plot(delta*np.arange(1,np.size(mag)+1),obs,'or',label = 'ZZcut')
     #plt.plot(delta*np.arange(1,np.size(mag)+1),obs2,'or',label = 'XXcut')
     plt.plot(delta*np.arange(1,np.size(mag)+1),entang,'or',label = 'Scut')
